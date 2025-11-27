@@ -2,10 +2,16 @@ const express = require("express");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const path = require("path");
+const { promisify } = require("util");
 const db = require("./database");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Promisify database methods
+const dbGet = promisify(db.get).bind(db);
+const dbRun = promisify(db.run).bind(db);
+const dbAll = promisify(db.all).bind(db);
 
 // Middleware
 app.use(express.json());
@@ -20,14 +26,9 @@ const validateUser = [
     .isAlphanumeric()
     .withMessage("Username can only contain letters and numbers"),
 
-  body("email")
-    .isEmail()
-    .normalizeEmail()
-    .withMessage("Must be a valid email address"),
+  body("email").isEmail().normalizeEmail().withMessage("Must be a valid email address"),
 
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters long"),
+  body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
 ];
 
 // API Routes - all prefixed with /api
@@ -45,16 +46,10 @@ app.post("/api/register", validateUser, async (req, res) => {
     const { username, email, password } = req.body;
 
     // Check if user already exists
-    const existingUser = await new Promise((resolve, reject) => {
-      db.get(
-        "SELECT * FROM users WHERE username = ? OR email = ?",
-        [username, email],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
+    const existingUser = await dbGet("SELECT * FROM users WHERE username = ? OR email = ?", [
+      username,
+      email,
+    ]);
 
     if (existingUser) {
       return res.status(409).json({
@@ -68,16 +63,11 @@ app.post("/api/register", validateUser, async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Insert new user
-    const result = await new Promise((resolve, reject) => {
-      db.run(
-        "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-        [username, email, hashedPassword],
-        function (err) {
-          if (err) reject(err);
-          else resolve(this);
-        }
-      );
-    });
+    const result = await dbRun("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", [
+      username,
+      email,
+      hashedPassword,
+    ]);
 
     res.status(201).json({
       success: true,
@@ -94,13 +84,13 @@ app.post("/api/register", validateUser, async (req, res) => {
 });
 
 // Get all users (for testing)
-app.get("/api/users", (req, res) => {
-  db.all("SELECT id, username, email, created_at FROM users", (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+app.get("/api/users", async (req, res) => {
+  try {
+    const rows = await dbAll("SELECT id, username, email, created_at FROM users");
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Serve the main page for all other routes (SPA support)
