@@ -1,0 +1,22 @@
+### Test User Registration
+POST http://localhost:3000/api/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+### Get All Users
+GET http://localhost:3000/api/users
+
+### Test Invalid Registration (short password)
+POST http://localhost:3000/api/register
+Content-Type: application/json
+
+{
+  "username": "tu",
+  "email": "invalid-email",
+  "password": "123"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "test-web-server",
+  "version": "1.0.0",
+  "description": "Basic user registration with SQLite",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "node server/app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "bcryptjs": "^2.4.3",
+    "express-validator": "^7.0.1"
+  }
+}
